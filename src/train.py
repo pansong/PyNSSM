@@ -76,7 +76,7 @@ state_net = StateNetwork(state_size, input_size)
 output_net = OutputNetwork(state_size, input_size, output_size)
 
 # 加载转换后的MATLAB文件
-MatlabData = scipy.io.loadmat('./data/MATLAB/MatlabData.mat')
+MatlabData = scipy.io.loadmat('./data/MatlabData.mat')
 scalingFactors = MatlabData['scalingFactors']
 
 # 提取数据

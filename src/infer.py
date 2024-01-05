@@ -82,7 +82,7 @@ state_net.eval()
 output_net.eval()
 
 # 加载转换后的MATLAB文件
-matrixData = scipy.io.loadmat('./data/MATLAB/MatlabData.mat')
+matrixData = scipy.io.loadmat('./data/MatlabData.mat')
 
 # 提取数据
 CsvData_array = matrixData['matrixData'][0]
