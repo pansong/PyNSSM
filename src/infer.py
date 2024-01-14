@@ -71,7 +71,7 @@ output_size = 2
 state_net = StateNetwork(state_size, input_size)
 output_net = OutputNetwork(state_size, input_size, output_size)
 
-plot_folder = "./data/20240105/"  # 要保存图片的路径
+plot_folder = "./data/20240114/"  # 要保存图片的路径
 
 # 加载训练好的模型参数
 state_net.load_state_dict(torch.load(Path(plot_folder) / f'state_net_32000.pth'))
@@ -275,7 +275,6 @@ def plot_and_save(data1, data2, data3, data4, sequence_number, plot_folder):
 # 对于X和X_pred、Y和Y_pred的每个序列绘制和保存图表
 for i in range(len(X)):
     plot_and_save(X[i], X_pred[i], Y[i], Y_pred[i], i, plot_folder)
-
 
 def calculate_errors(actual_list, predicted_list, variable_index):
     # Concatenate all sequences for each variable

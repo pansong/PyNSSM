@@ -120,7 +120,7 @@ criterion = nn.L1Loss()  # 平均绝对误差
 # 定义积分步长
 dt = 0.01
 # 定义Epoch数量
-M = int(3.6e4)
+M = int(3.2e4)
 
 # 在训练前将模型移动到 GPU 设备
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -170,7 +170,7 @@ def plot_loss(epoch, state_losses, output_losses, folder):
     plt.plot(epochs, output_losses, label='Output Network Loss')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
-    plt.title(f'Loss from Epoch {epoch - (1000-1)} to {epoch}')
+    plt.title(f'Loss from Epoch {epoch - (2000-1)} to {epoch}')
     plt.legend()
     plt.grid(True)
     plt.savefig(folder / f'loss_epoch_{epoch}.png')
@@ -232,7 +232,7 @@ def training_loop(n_epochs, state_net, output_net, state_optimizer, output_optim
         if ((epoch + 1) % 4000) == 0 or (epoch == n_epochs - 1):
             torch.save(state_net.state_dict(), Path(plot_folder) / f'state_net_{epoch + 1}.pth')
             torch.save(output_net.state_dict(), Path(plot_folder) / f'output_net_{epoch + 1}.pth')
-        
+
         # Print average loss for the epoch and time taken
         end_time = time.time()
         epoch_duration = end_time - start_time
@@ -242,13 +242,13 @@ def training_loop(n_epochs, state_net, output_net, state_optimizer, output_optim
         state_losses.append(state_loss_epoch)
         output_losses.append(output_loss_epoch)
 
-        # 每1000个epoch绘图并重置损失列表
-        if (epoch + 1) % 1000 == 0 or (epoch == n_epochs - 1):
+        # 每2000个epoch绘图并重置损失列表
+        if (epoch + 1) % 2000 == 0 or (epoch == n_epochs - 1):
             plot_loss(epoch + 1, state_losses, output_losses, Path(plot_folder))
             state_losses = []  # 重置列表
             output_losses = []  # 重置列表
 
-plot_folder = "./data/20240105/"  # 要保存图片的路径
+plot_folder = "./data/20240114/"  # 要保存图片的路径
 # 运行训练循环
 training_loop(n_epochs=M, 
               state_net=state_net, 
