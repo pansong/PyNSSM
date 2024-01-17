@@ -200,8 +200,15 @@ def training_loop(n_epochs, state_net, output_net, state_optimizer, output_optim
                 dxdt_batch = state_net(state_input_batch)
                 
                 next_states_unclamped = states_pred_batch[-1] + dxdt_batch * dt
-                next_states = torch.clamp(next_states_unclamped, min=x_zero_scaled)
-                states_pred_batch.append(next_states)
+
+                # 创建一个新的张量来存储限制后的状态
+                next_states_clamped = next_states_unclamped.clone()
+                for i, scale in enumerate([x_zero_scaled, None]):
+                    if scale is not None:
+                        next_states_clamped[:, i] = torch.clamp(next_states_unclamped[:, i], min=scale)
+
+                # 使用新的张量继续后续操作
+                states_pred_batch.append(next_states_clamped)
 
             states_pred_batch = torch.stack(states_pred_batch, dim=1)
             loss_state = criterion(states_pred_batch, X_batch[:, :, :state_size])
@@ -248,7 +255,7 @@ def training_loop(n_epochs, state_net, output_net, state_optimizer, output_optim
             state_losses = []  # 重置列表
             output_losses = []  # 重置列表
 
-plot_folder = "./data/20240114/"  # 要保存图片的路径
+plot_folder = "./data/20240117/"  # 要保存图片的路径
 # 运行训练循环
 training_loop(n_epochs=M, 
               state_net=state_net, 
