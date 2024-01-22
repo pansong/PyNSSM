@@ -71,6 +71,85 @@ def normalize(CsvData_array, Gas_scale, Gas_offset, Decel_scale, Decel_offset, S
 
     return CsvData_norm, U, X, Y, U_norm, X_norm, Y_norm
 
+# 定义一个函数来绘制和保存图表
+def plot_and_save(data1, data2, data3, data4, sequence_number, data_folder):
+    time = np.linspace(0, (len(data1) - 1) * dt, len(data1))
+
+    # 启用LaTeX渲染器和设置字体
+    plt.rcParams['text.usetex'] = True
+    plt.rcParams['font.family'] = 'serif'
+    plt.rcParams['font.serif'] = ['Times New Roman']
+    plt.rcParams['font.size'] = 9
+
+    fig, axs = plt.subplots(4, 1, figsize=(3.5, 4))  # 尺寸转换为英寸
+
+    # 设置每个子图的 X 轴范围
+    x_min, x_max = 0, (len(data1) - 1) * dt
+
+    # 设置 Y 轴标签的统一位置
+    y_label_x_position = -0.15
+
+    # 设置X轴只显示整数刻度
+    for ax in axs:
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+
+    # 第一个图
+    axs[0].plot(time, data1[:, 0], 'b-', label='Experiment', linewidth=0.5)
+    axs[0].plot(time, data2[:, 0], 'r-', label='Simulation', linewidth=0.5)
+    axs[0].set_ylabel('$V_x$ (km/h)')
+    axs[0].set_xlim(x_min, x_max)
+    axs[0].yaxis.set_label_coords(y_label_x_position, 0.5)
+    axs[0].set_xticklabels([])
+
+    # 第二个图
+    axs[1].plot(time, data1[:, 1], 'b-', label='Experiment', linewidth=0.5)
+    axs[1].plot(time, data2[:, 1], 'r-', label='Simulation', linewidth=0.5)
+    axs[1].set_ylabel('$\dot{\psi}$ (deg/sec)')
+    axs[1].yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    axs[1].set_xlim(x_min, x_max)
+    axs[1].yaxis.set_label_coords(y_label_x_position, 0.5)
+    axs[1].set_xticklabels([])
+    
+    # 第三个图
+    axs[2].plot(time, data3[:, 0], 'b-', label='Experiment', linewidth=0.5)
+    axs[2].plot(time, data4[:, 0], 'r-', label='Simulation', linewidth=0.5)
+    axs[2].set_ylabel('$a_x$ ($g$)')
+    axs[2].yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    axs[2].set_xlim(x_min, x_max)
+    axs[2].yaxis.set_label_coords(y_label_x_position, 0.5)
+    axs[2].set_xticklabels([])
+
+    # 第四个图
+    axs[3].plot(time, data3[:, 1], 'b-', label='Experiment', linewidth=0.5)
+    axs[3].plot(time, data4[:, 1], 'r-', label='Simulation', linewidth=0.5)
+    axs[3].set_xlabel('Time (sec)')
+    axs[3].set_ylabel('$a_y$ ($g$)')
+    axs[3].yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    axs[3].set_xlim(x_min, x_max)
+    axs[3].yaxis.set_label_coords(y_label_x_position, 0.5)
+
+    # 设置图例
+    fig.legend(['Experiment', 'Simulation'], loc='upper center', ncol=2, bbox_to_anchor=(0.58, 1))
+
+    # 调整布局
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.92, bottom=0.12)  # 调整顶部和底部边距
+
+    # 保存图表
+    plt.savefig(f"{data_folder}/sequence_{sequence_number}.png", dpi=600)
+    plt.close()
+
+def calculate_errors(actual_list, predicted_list, variable_index):
+    # Concatenate all sequences for each variable
+    actual_var = np.concatenate([seq[:, variable_index] for seq in actual_list])
+    predicted_var = np.concatenate([seq[:, variable_index] for seq in predicted_list])
+
+    # Calculate MSE and MAE for the concatenated sequences
+    mse = mean_squared_error(actual_var, predicted_var)
+    mae = mean_absolute_error(actual_var, predicted_var)
+    
+    return mse, mae
+
 # 主程序入口点
 if __name__ == "__main__":
     # 定义网络结构并创建StateNetwork和OutputNetwork的实例
@@ -166,87 +245,9 @@ if __name__ == "__main__":
         denorm_matrix[:, 1] = ( matrix[:, 1] - Ay_offset ) / Ay_scale
         Y_pred.append(denorm_matrix)
 
-    # 启用LaTeX渲染器和设置字体
-    plt.rcParams['text.usetex'] = True
-    plt.rcParams['font.family'] = 'serif'
-    plt.rcParams['font.serif'] = ['Times New Roman']
-    plt.rcParams['font.size'] = 9
-
-    # 定义一个函数来绘制和保存图表
-    def plot_and_save(data1, data2, data3, data4, sequence_number, data_folder):
-        time = np.linspace(0, (len(data1) - 1) * dt, len(data1))
-        fig, axs = plt.subplots(4, 1, figsize=(3.5, 4))  # 尺寸转换为英寸
-
-        # 设置每个子图的 X 轴范围
-        x_min, x_max = 0, (len(data1) - 1) * dt
-
-        # 设置 Y 轴标签的统一位置
-        y_label_x_position = -0.15
-
-        # 设置X轴只显示整数刻度
-        for ax in axs:
-            ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-
-        # 第一个图
-        axs[0].plot(time, data1[:, 0], 'b-', label='Experiment', linewidth=0.5)
-        axs[0].plot(time, data2[:, 0], 'r-', label='Simulation', linewidth=0.5)
-        axs[0].set_ylabel('$V_x$ (km/h)')
-        axs[0].set_xlim(x_min, x_max)
-        axs[0].yaxis.set_label_coords(y_label_x_position, 0.5)
-        axs[0].set_xticklabels([])
-
-        # 第二个图
-        axs[1].plot(time, data1[:, 1], 'b-', label='Experiment', linewidth=0.5)
-        axs[1].plot(time, data2[:, 1], 'r-', label='Simulation', linewidth=0.5)
-        axs[1].set_ylabel('$\dot{\psi}$ (deg/sec)')
-        axs[1].yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        axs[1].set_xlim(x_min, x_max)
-        axs[1].yaxis.set_label_coords(y_label_x_position, 0.5)
-        axs[1].set_xticklabels([])
-        
-        # 第三个图
-        axs[2].plot(time, data3[:, 0], 'b-', label='Experiment', linewidth=0.5)
-        axs[2].plot(time, data4[:, 0], 'r-', label='Simulation', linewidth=0.5)
-        axs[2].set_ylabel('$a_x$ ($g$)')
-        axs[2].yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-        axs[2].set_xlim(x_min, x_max)
-        axs[2].yaxis.set_label_coords(y_label_x_position, 0.5)
-        axs[2].set_xticklabels([])
-
-        # 第四个图
-        axs[3].plot(time, data3[:, 1], 'b-', label='Experiment', linewidth=0.5)
-        axs[3].plot(time, data4[:, 1], 'r-', label='Simulation', linewidth=0.5)
-        axs[3].set_xlabel('Time (sec)')
-        axs[3].set_ylabel('$a_y$ ($g$)')
-        axs[3].yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-        axs[3].set_xlim(x_min, x_max)
-        axs[3].yaxis.set_label_coords(y_label_x_position, 0.5)
-
-        # 设置图例
-        fig.legend(['Experiment', 'Simulation'], loc='upper center', ncol=2, bbox_to_anchor=(0.58, 1))
-
-        # 调整布局
-        plt.tight_layout()
-        plt.subplots_adjust(top=0.92, bottom=0.12)  # 调整顶部和底部边距
-
-        # 保存图表
-        plt.savefig(f"{data_folder}/sequence_{sequence_number}.png", dpi=600)
-        plt.close()
-
     # 对于X和X_pred、Y和Y_pred的每个序列绘制和保存图表
     for i in range(len(X)):
         plot_and_save(X[i], X_pred[i], Y[i], Y_pred[i], i, data_folder)
-
-    def calculate_errors(actual_list, predicted_list, variable_index):
-        # Concatenate all sequences for each variable
-        actual_var = np.concatenate([seq[:, variable_index] for seq in actual_list])
-        predicted_var = np.concatenate([seq[:, variable_index] for seq in predicted_list])
-
-        # Calculate MSE and MAE for the concatenated sequences
-        mse = mean_squared_error(actual_var, predicted_var)
-        mae = mean_absolute_error(actual_var, predicted_var)
-        
-        return mse, mae
 
     # Define variable indices corresponding to Vx, Yaw, Ax, Ay
     variable_indices = {
