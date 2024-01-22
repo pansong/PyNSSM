@@ -71,11 +71,6 @@ def normalize(CsvData_array, Gas_scale, Gas_offset, Decel_scale, Decel_offset, S
 
     return CsvData_norm, U, X, Y, U_norm, X_norm, Y_norm
 
-# 单个时间序列的预测逻辑
-def predict_sequence(state_net, output_net, sequence_data, x_zero_scaled, dt):
-    # ... 预测逻辑 ...
-    return states_pred, outputs_pred
-
 # 主程序入口点
 if __name__ == "__main__":
     # 定义网络结构并创建StateNetwork和OutputNetwork的实例
