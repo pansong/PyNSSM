@@ -158,7 +158,7 @@ if __name__ == "__main__":
     output_net = CustomNetwork([input_size + state_size] + [64] * 3 + [output_size])
 
     # 设定DATA路径
-    data_folder = "./data/20240122/"
+    data_folder = "./data/results/"
 
     # 加载训练好的模型参数
     state_net.load_state_dict(torch.load(Path(data_folder) / f'state_net_32000.pth'))
@@ -197,8 +197,15 @@ if __name__ == "__main__":
             dxdt = state_net(state_input)
             # next_state = last_state + dxdt.squeeze(0) * dt
             next_state_unclamped = last_state + dxdt.squeeze(0) * dt
-            next_state = next_state_unclamped.clone()
-            next_state[0] = torch.clamp(next_state_unclamped[0], min=x_zero_scaled)  # 确保 Vx，即第一个元素，不小于0
+            next_state_clamped = next_state_unclamped.clone()
+            next_state_clamped[0] = torch.clamp(next_state_unclamped[0], min=x_zero_scaled)  # 确保 Vx，即第一个元素，不小于0
+            x2_est = ((next_state_clamped[0] - Vx_offset) / Vx_scale / 3.6) / 3.0 * torch.tan(((u_tensor[:, 2].squeeze(0) - Steer_offset) / Steer_scale) / 180.0 * torch.pi / 13.0)/torch.pi*180
+            x2_1_scaled = x2_est * 1.2 * Yaw_scale + Yaw_offset
+            x2_2_scaled = x2_est * 0.8 * Yaw_scale + Yaw_offset
+            x2_high_scaled = torch.max(x2_1_scaled, x2_2_scaled)
+            x2_low_scaled = torch.min(x2_1_scaled, x2_2_scaled)
+            next_state = next_state_clamped.clone()
+            next_state[1] = torch.clamp(next_state_clamped[1], min=x2_low_scaled, max=x2_high_scaled)
             states_pred.append(next_state.unsqueeze(0))
 
         # 使用整个states_pred列表来创建states_pred_stacked

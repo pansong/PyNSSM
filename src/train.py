@@ -102,7 +102,7 @@ def plot_loss(epoch, state_losses, output_losses, folder, loss_plot_interval):
     plt.savefig(folder / f'loss_epoch_{epoch}.png')
     plt.close()
 
-# 逐个时间步长更新预测状态，并用clamp函数限制状态变量在合理范围
+# 逐个时间步长更新预测状态
 def train_one_epoch(state_net, output_net, state_optimizer, output_optimizer, criterion, dataloader, dt, state_size, device, x_zero_scaled):
     state_loss_epoch = 0  # Record the state network loss for the epoch
     output_loss_epoch = 0  # Record the output network loss for the epoch
@@ -117,16 +117,10 @@ def train_one_epoch(state_net, output_net, state_optimizer, output_optimizer, cr
             state_input_batch = torch.cat((states_pred_batch[-1], U_batch[:, t-1, :]), dim=-1)
             dxdt_batch = state_net(state_input_batch)
             
-            next_states_unclamped = states_pred_batch[-1] + dxdt_batch * dt
-
-            # 创建一个新的张量来存储限制后的状态
-            next_states_clamped = next_states_unclamped.clone()
-            for i, scale in enumerate([x_zero_scaled, None]):
-                if scale is not None:
-                    next_states_clamped[:, i] = torch.clamp(next_states_unclamped[:, i], min=scale)
+            next_states = states_pred_batch[-1] + dxdt_batch * dt
 
             # 使用新的张量继续后续操作
-            states_pred_batch.append(next_states_clamped)
+            states_pred_batch.append(next_states)
 
         states_pred_batch = torch.stack(states_pred_batch, dim=1)
         loss_state = criterion(states_pred_batch, X_batch[:, :, :state_size])
@@ -218,7 +212,7 @@ if __name__ == "__main__":
     output_net.to(device)
     
     # 数据保存文件夹
-    data_folder = "./data/20240122/"
+    data_folder = "./data/results/"
     
     # 运行训练循环
     M = int(3.2e4)  # 定义Epoch数量
