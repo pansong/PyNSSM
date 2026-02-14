@@ -1,40 +1,56 @@
-# Project Setup
+# PyNSSM
 
-## Step 1: Setting Up the Conda Environment
-Setting up a Conda environment with all necessary packages and dependencies is required before beginning project execution or development. Follow the steps outlined below to create and activate the environment:
+A neural state-space model for vehicle dynamics prediction built with PyTorch.
 
-### Creating Environment
-1. Initiate the setup process by opening the terminal. For Windows users, Anaconda Prompt or PowerShell is recommended.
-2. Use the `cd` command to navigate to your project's directory where the `requirements.txt` file is located. For example:
+---
+
+> **Looking for the paper version?**
+> The code in this repository has been refactored and optimized since the original publication. For the exact code used in the paper, please download the [v1.0-paper Release](https://github.com/peterpsong/PyNSSM/releases/tag/v1.0-paper) on GitHub.
+
+---
+
+## What's New in v2.0
+
+This version introduces a modular package structure and several optimizations over the original codebase:
+
+- **Modular architecture** — Model, data loading, configuration, and plotting logic are separated into dedicated modules under `src/`.
+- **Vectorized inference** — Batch tensor operations replace per-element loops where possible.
+- **Combined loss passes** — State and output network gradients are computed in a single backward pass per batch, reducing overhead.
+- **Improved readability** — Cleaner separation of concerns, consistent naming, and centralized configuration.
+
+## Project Setup
+
+### Step 1: Setting Up the Conda Environment
+
+A Conda environment with all necessary packages and dependencies is required before running the project. Follow the steps below to create and activate the environment.
+
+#### Creating Environment
+
+1. Open your terminal. For Windows users, Anaconda Prompt or PowerShell is recommended.
+2. Navigate to the project root where `requirements.txt` is located:
 ```bash
 cd ~/PyNSSM
 ```
-3. To establish the Conda environment, execute the command below, substituting `<env_name>` with the desired name for the environment:
+3. Create the Conda environment, replacing `<env_name>` with your desired name:
 ```bash
 conda create --name <env_name> --file requirements.txt
 ```
 
-The command installs specified packages from `requirements.txt` into the new environment, duration varies by internet speed and computer performance.
+#### Activating Environment
 
-### Activating Environment
-
-After creating the environment, you need to activate it to use it for the project:
-
-**Activate the environment:** Run the following command, replacing `<env_name>` with the name of your environment:
+Activate the environment:
 ```bash
 conda activate <env_name>
 ```
 
-**Verification:** To ensure the environment is set up correctly and all packages are installed, you can execute:
+Verify that all packages are installed:
 ```bash
 conda list
 ```
 
-This command lists all the packages installed in the active Conda environment. Verify that the output includes the packages listed in `requirements.txt`.
+### Step 1.5: Installing LaTeX Dependencies
 
-## Step 1.5: Installing LaTeX Dependencies
-
-The inference plots use LaTeX rendering for axis labels and annotations. Matplotlib requires a working LaTeX installation on your system. If you see `RuntimeError: Failed to process string with tex because latex could not be found`, install the following system packages:
+The inference plots use LaTeX rendering for axis labels. If you see `RuntimeError: Failed to process string with tex because latex could not be found`, install the following system packages:
 
 **Ubuntu/Debian:**
 ```bash
@@ -51,52 +67,70 @@ sudo dnf install texlive-latex texlive-dvipng texlive-cm-super
 brew install --cask mactex
 ```
 
-After installation, verify LaTeX is available:
+Verify LaTeX is available:
 ```bash
 latex --version
 ```
 
-## Step 2: Training NSS Model
-
-Before starting the training process, ensure all necessary data and the Python environment are prepared as described in the previous steps. The model training is conducted using the `src.train` module, which utilizes data from `./data/MatlabData.mat` and outputs the training results into `./data/results/`.
+## File Structure
 
 The project is organized as a Python package under `src/`:
-- `src/model.py` — Network architecture (`CustomNetwork`)
-- `src/config.py` — Hyperparameters, paths, and constants
-- `src/data.py` — Data loading, normalization, and dataset classes
-- `src/plotting.py` — All plotting functions
-- `src/train.py` — Training loop and entrypoint
-- `src/infer.py` — Inference and evaluation entrypoint
+
+```
+PyNSSM/
+├── data/
+│   ├── MatlabData.mat          # Training and inference data
+│   └── results/                # Output directory for weights, plots, and metrics
+├── src/
+│   ├── __init__.py
+│   ├── config.py               # Hyperparameters, paths, and constants
+│   ├── model.py                # Network architecture (CustomNetwork)
+│   ├── data.py                 # Data loading, normalization, and dataset classes
+│   ├── plotting.py             # All plotting functions (training curves, inference)
+│   ├── train.py                # Training loop and entrypoint
+│   └── infer.py                # Inference and evaluation entrypoint
+├── requirements.txt
+├── CLAUDE.md
+└── readme.md
+```
+
+| Module | Responsibility |
+|---|---|
+| `config.py` | All hyperparameters (epochs, learning rate, dt), layer sizes, file paths, and scaling field names |
+| `model.py` | `CustomNetwork` class — fully-connected layers with Tanh activations and Xavier initialization |
+| `data.py` | Loading MATLAB data, scaling factor parsing, normalization, and the `ExperimentDataset` class |
+| `plotting.py` | Training prediction plots, loss curves, and publication-quality inference figures |
+| `train.py` | Training loop with Adam optimizer, L1 loss, periodic checkpointing, and GPU support |
+| `infer.py` | Sequential state prediction with physical constraints (Vx >= 0, bicycle-model yaw bounds), MSE/MAE metrics |
+
+## Step 2: Training the Model
+
+Ensure all data and the Python environment are prepared as described above. Training reads data from `./data/MatlabData.mat` and saves results to `./data/results/`.
 
 ### Executing Training Script
 
-1. Ensure you're in the root directory of your project, where you initially set up your environment. If you're following the provided example, you would be in `~/PyNSSM/`.
-2. Start the training by executing the command below in your terminal:
+From the project root (`~/PyNSSM`):
 ```bash
 python -m src.train
 ```
-This command initiates the `train.py` module, which automatically reads the MATLAB data, trains the NSS model based on this data, and then saves both the intermediate and final results to `./data/results/`.
 
 ### Monitoring Training Progress
-- **Console Output:** The script provides real-time updates through the terminal, displaying information about the current epoch, loss metrics for both the state network and the output network, as well as the time taken to complete each epoch.
-- **Results and Outputs:** All training outputs, including loss plots, prediction visualizations, and saved model weights (`*.pth` files), are stored in `./data/results/`.
+
+- **Console Output:** Real-time updates showing the current epoch, state/output loss, and epoch duration.
+- **Results and Outputs:** Loss plots, prediction visualizations, and saved model weights (`*.pth` files) are stored in `./data/results/`.
 
 ## Step 3: Performing Inference
 
-After the model has been trained and the training outputs have been analyzed, the next step is to use the model for inference on new data. This process involves running the `infer.py` script, which loads the trained model weights and performs predictions on the input data specified in `./data/MatlabData.mat`. The results of the inference include various performance metrics such as Mean Squared Error (MSE) and Mean Absolute Error (MAE) for each state or output variable, both in scaled and unscaled forms.
+After training, use the trained model for inference. The script loads weights from `./data/results/`, runs sequential predictions on the data in `./data/MatlabData.mat`, and computes performance metrics.
 
 ### Executing Inference Script
 
-To perform inference with the trained model, follow these steps:
-
-1. Ensure you're in the root directory of your project, where you have executed the previous commands.
-2. Run the inference script by executing the command below in your terminal:
+From the project root:
 ```bash
 python -m src.infer
 ```
-This command initiates the `infer.py` module, which loads the trained model weights from `./data/results/`, processes the input data from `./data/MatlabData.mat`, and computes the model's predictions. The script then calculates and displays various performance metrics for the predictions.
 
 ### Understanding the Output
-The output from the `infer.py` script provides detailed metrics on the model's performance, including:
-- **MSE and MAE:** These metrics are provided for each output variable (e.g., $V_x$, $\dot{\psi}$, $a_x$, $a_y$), allowing you to assess the model's accuracy. Both metrics are presented in their scaled and unscaled forms to give a comprehensive view of the model's performance.
-- **Visualization:** The script also generates plots comparing the predicted values against the actual values for each sequence from `./data/MatlabData.mat`. These plots are saved in `./data/results/` and serve as a visual confirmation of the model's predictive capabilities.
+
+- **MSE and MAE:** Metrics for each variable ($V_x$, $\dot{\psi}$, $a_x$, $a_y$) in both scaled and unscaled forms.
+- **Visualization:** Plots comparing predicted vs. actual values for each sequence, saved in `./data/results/`.
