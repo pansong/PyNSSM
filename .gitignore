@@ -1,0 +1,8 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Training artifacts
+data/results/*.png
+data/results/*.pth

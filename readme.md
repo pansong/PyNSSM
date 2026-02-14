@@ -32,18 +32,50 @@ conda list
 
 This command lists all the packages installed in the active Conda environment. Verify that the output includes the packages listed in `requirements.txt`.
 
+## Step 1.5: Installing LaTeX Dependencies
+
+The inference plots use LaTeX rendering for axis labels and annotations. Matplotlib requires a working LaTeX installation on your system. If you see `RuntimeError: Failed to process string with tex because latex could not be found`, install the following system packages:
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install texlive-latex-extra texlive-fonts-recommended dvipng cm-super
+```
+
+**Fedora/RHEL:**
+```bash
+sudo dnf install texlive-latex texlive-dvipng texlive-cm-super
+```
+
+**macOS (via Homebrew):**
+```bash
+brew install --cask mactex
+```
+
+After installation, verify LaTeX is available:
+```bash
+latex --version
+```
+
 ## Step 2: Training NSS Model
 
-Before starting the training process, ensure all necessary data and the Python environment are prepared as described in the previous steps. The model training is conducted using the `train.py` script, which utilizes data from `./data/MatlabData.mat` and outputs the training results into `./data/results/`.
+Before starting the training process, ensure all necessary data and the Python environment are prepared as described in the previous steps. The model training is conducted using the `src.train` module, which utilizes data from `./data/MatlabData.mat` and outputs the training results into `./data/results/`.
+
+The project is organized as a Python package under `src/`:
+- `src/model.py` — Network architecture (`CustomNetwork`)
+- `src/config.py` — Hyperparameters, paths, and constants
+- `src/data.py` — Data loading, normalization, and dataset classes
+- `src/plotting.py` — All plotting functions
+- `src/train.py` — Training loop and entrypoint
+- `src/infer.py` — Inference and evaluation entrypoint
 
 ### Executing Training Script
 
 1. Ensure you're in the root directory of your project, where you initially set up your environment. If you're following the provided example, you would be in `~/PyNSSM/`.
 2. Start the training by executing the command below in your terminal:
 ```bash
-python ./src/train.py
+python -m src.train
 ```
-This command initiates the `train.py` script, which automatically reads the MATLAB data, trains the NSS model based on this data, and then saves both the intermediate and final results to `./data/results/`.
+This command initiates the `train.py` module, which automatically reads the MATLAB data, trains the NSS model based on this data, and then saves both the intermediate and final results to `./data/results/`.
 
 ### Monitoring Training Progress
 - **Console Output:** The script provides real-time updates through the terminal, displaying information about the current epoch, loss metrics for both the state network and the output network, as well as the time taken to complete each epoch.
@@ -60,9 +92,9 @@ To perform inference with the trained model, follow these steps:
 1. Ensure you're in the root directory of your project, where you have executed the previous commands.
 2. Run the inference script by executing the command below in your terminal:
 ```bash
-python ./src/infer.py
+python -m src.infer
 ```
-This command initiates the `infer.py` script, which loads the trained model weights from `./data/results/`, processes the input data from `./data/MatlabData.mat`, and computes the model's predictions. The script then calculates and displays various performance metrics for the predictions.
+This command initiates the `infer.py` module, which loads the trained model weights from `./data/results/`, processes the input data from `./data/MatlabData.mat`, and computes the model's predictions. The script then calculates and displays various performance metrics for the predictions.
 
 ### Understanding the Output
 The output from the `infer.py` script provides detailed metrics on the model's performance, including:
