@@ -5,7 +5,7 @@ A neural state-space model for vehicle dynamics prediction built with PyTorch.
 ---
 
 > **Looking for the paper version?**
-> The code in this repository has been refactored and optimized since the original publication. For the exact code used in the paper, please download the [v1.0-paper Release](https://github.com/peterpsong/PyNSSM/releases/tag/v1.0-paper) on GitHub.
+> The code in this repository has been refactored and optimized since the original publication. For the exact code used in the paper, please download the [v1.0-paper Release](https://github.com/pansong/PyNSSM/releases/tag/v1.0-paper) on GitHub.
 
 ---
 
