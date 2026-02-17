@@ -34,18 +34,34 @@ def plot_predictions(epoch, time, states_pred, X, output_pred, Y, state_size, ou
     plt.close()
 
 
-def plot_loss(epoch, state_losses, output_losses, folder, loss_plot_interval):
-    """Plot training loss curves."""
+def plot_loss(epoch, state_losses, output_losses, folder, loss_plot_interval,
+              val_state_losses=None, val_output_losses=None):
+    """Plot training and validation loss curves."""
     folder = Path(folder)
-    plt.figure(figsize=(10, 5))
     epochs = range(1, len(state_losses) + 1)
-    plt.plot(epochs, state_losses, label='State Network Loss')
-    plt.plot(epochs, output_losses, label='Output Network Loss')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.title(f'Loss from Epoch {epoch - (loss_plot_interval - 1)} to {epoch}')
-    plt.legend()
-    plt.grid(True)
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+
+    ax1.plot(epochs, state_losses, label='Train')
+    if val_state_losses is not None:
+        ax1.plot(epochs, val_state_losses, label='Validation', linestyle='--')
+    ax1.set_xlabel('Epoch')
+    ax1.set_ylabel('Loss')
+    ax1.set_title('State Network Loss')
+    ax1.legend()
+    ax1.grid(True)
+
+    ax2.plot(epochs, output_losses, label='Train')
+    if val_output_losses is not None:
+        ax2.plot(epochs, val_output_losses, label='Validation', linestyle='--')
+    ax2.set_xlabel('Epoch')
+    ax2.set_ylabel('Loss')
+    ax2.set_title('Output Network Loss')
+    ax2.legend()
+    ax2.grid(True)
+
+    fig.suptitle(f'Loss from Epoch {epoch - (loss_plot_interval - 1)} to {epoch}')
+    plt.tight_layout()
     plt.savefig(folder / f'loss_epoch_{epoch}.png')
     plt.close()
 
