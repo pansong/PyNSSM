@@ -79,7 +79,7 @@ The project is organized as a Python package under `src/`:
 ```
 PyNSSM/
 ├── data/
-│   ├── MatlabData.mat          # Training and inference data
+│   ├── RawData.mat              # Training and inference data
 │   └── results/                # Output directory for weights, plots, and metrics
 ├── src/
 │   ├── __init__.py
@@ -96,16 +96,16 @@ PyNSSM/
 
 | Module | Responsibility |
 |---|---|
-| `config.py` | All hyperparameters (epochs, learning rate, dt), layer sizes, file paths, and scaling field names |
+| `config.py` | All hyperparameters (epochs, learning rate, dt), layer sizes, file paths, physics constants, and PINN loss weights |
 | `model.py` | `CustomNetwork` class — fully-connected layers with Tanh activations and Xavier initialization |
-| `data.py` | Loading MATLAB data, scaling factor parsing, normalization, and the `ExperimentDataset` class |
+| `data.py` | Loading MATLAB data, min-max normalization, and the `ExperimentDataset` class |
 | `plotting.py` | Training prediction plots, loss curves, and publication-quality inference figures |
-| `train.py` | Training loop with Adam optimizer, L1 loss, periodic checkpointing, and GPU support |
-| `infer.py` | Sequential state prediction with physical constraints (Vx >= 0, bicycle-model yaw bounds), MSE/MAE metrics |
+| `train.py` | Training loop with Adam optimizer, L1 loss, PINN physics penalties (Vx >= 0, bicycle model yaw rate), periodic checkpointing, and GPU support |
+| `infer.py` | Sequential state prediction with Vx >= 0 clamp, MSE/MAE metrics |
 
 ## Step 2: Training the Model
 
-Ensure all data and the Python environment are prepared as described above. Training reads data from `./data/MatlabData.mat` and saves results to `./data/results/`.
+Ensure all data and the Python environment are prepared as described above. Training reads data from `./data/RawData.mat` and saves results to `./data/results/`.
 
 ### Executing Training Script
 
@@ -121,7 +121,7 @@ python -m src.train
 
 ## Step 3: Performing Inference
 
-After training, use the trained model for inference. The script loads weights from `./data/results/`, runs sequential predictions on the data in `./data/MatlabData.mat`, and computes performance metrics.
+After training, use the trained model for inference. The script loads weights from `./data/results/`, runs sequential predictions on the data in `./data/RawData.mat`, and computes performance metrics.
 
 ### Executing Inference Script
 
