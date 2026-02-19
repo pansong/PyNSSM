@@ -88,7 +88,8 @@ PyNSSM/
 │   ├── data.py                 # Data loading, normalization, and dataset classes
 │   ├── plotting.py             # All plotting functions (training curves, inference)
 │   ├── train.py                # Training loop and entrypoint
-│   └── infer.py                # Inference and evaluation entrypoint
+│   ├── infer.py                # Inference and evaluation entrypoint
+│   └── eval.py                 # Checkpoint evaluation across epochs
 ├── requirements.txt
 ├── CLAUDE.md
 └── readme.md
@@ -102,6 +103,7 @@ PyNSSM/
 | `plotting.py` | Training prediction plots, loss curves, and publication-quality inference figures |
 | `train.py` | Training loop with Adam optimizer, L1 loss, PINN physics penalties (Vx >= 0, bicycle model yaw rate), periodic checkpointing, and GPU support |
 | `infer.py` | Sequential state prediction with Vx >= 0 clamp, MSE/MAE metrics |
+| `eval.py` | Evaluates all saved checkpoints, computes scaled MSE/MAE for each, and plots metric trends over epochs |
 
 ## Step 2: Training the Model
 
@@ -134,3 +136,13 @@ python -m src.infer
 
 - **MSE and MAE:** Metrics for each variable ($V_x$, $\dot{\psi}$, $a_x$, $a_y$) in both scaled and unscaled forms.
 - **Visualization:** Plots comparing predicted vs. actual values for each sequence, saved in `./data/results/`.
+
+## Step 4: Evaluating Checkpoints
+
+To evaluate all saved checkpoints and plot how inference metrics evolve over training epochs:
+
+```bash
+python -m src.eval
+```
+
+This scans `./data/results/` for all `state_net_*.pth`/`output_net_*.pth` pairs, runs inference on each, and produces `eval_checkpoints.png` showing scaled MSE and MAE trends for all variables.

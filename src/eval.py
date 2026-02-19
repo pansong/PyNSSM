@@ -17,10 +17,8 @@ from .config import (
 
 def run_inference(state_net, output_net, stats, x_zero_scaled, U_torch, X_norm, Y_norm, X, Y):
     """Run inference and return metrics dict."""
-    Y_mean = stats['Y_mean']
-    Y_std = stats['Y_std']
-    U_mean = stats['U_mean']
-    U_std = stats['U_std']
+    Y_min = stats['Y_min']
+    Y_max = stats['Y_max']
 
     with torch.no_grad():
         X_pred_torch = []
@@ -34,18 +32,8 @@ def run_inference(state_net, output_net, stats, x_zero_scaled, U_torch, X_norm, 
                 state_input = torch.cat((last_state.unsqueeze(0), u_tensor), dim=1)
                 dxdt = state_net(state_input)
                 next_state_unclamped = last_state + dxdt.squeeze(0) * DT
-                next_state_clamped = next_state_unclamped.clone()
-                next_state_clamped[0] = torch.clamp(next_state_unclamped[0], min=x_zero_scaled)
-                # Bicycle model yaw rate constraint
-                vx_raw = next_state_clamped[0] * Y_std[0] + Y_mean[0]
-                steer_raw = u_tensor[:, 2].squeeze(0) * U_std[2] + U_mean[2]
-                x2_est = (vx_raw / 3.6) / 3.0 * torch.tan(steer_raw / 180.0 * torch.pi / 13.0) / torch.pi * 180
-                x2_1_scaled = (x2_est * 1.2 - Y_mean[1]) / Y_std[1]
-                x2_2_scaled = (x2_est * 0.8 - Y_mean[1]) / Y_std[1]
-                x2_high_scaled = torch.max(x2_1_scaled, x2_2_scaled)
-                x2_low_scaled = torch.min(x2_1_scaled, x2_2_scaled)
-                next_state = next_state_clamped.clone()
-                next_state[1] = torch.clamp(next_state_clamped[1], min=x2_low_scaled, max=x2_high_scaled)
+                next_state = next_state_unclamped.clone()
+                next_state[0] = torch.clamp(next_state_unclamped[0], min=x_zero_scaled)
                 states_pred.append(next_state.unsqueeze(0))
 
             X_pred_torch.append(torch.cat(states_pred, dim=0))
@@ -53,7 +41,7 @@ def run_inference(state_net, output_net, stats, x_zero_scaled, U_torch, X_norm, 
         X_pred_norm = [x.numpy() for x in X_pred_torch]
         X_pred = []
         for matrix in X_pred_norm:
-            X_pred.append(matrix * Y_std[0:2].numpy() + Y_mean[0:2].numpy())
+            X_pred.append((matrix + 1) / 2 * (Y_max[0:2] - Y_min[0:2]).numpy() + Y_min[0:2].numpy())
 
         Y_pred_torch = []
         for i in range(len(U_torch)):
@@ -63,7 +51,7 @@ def run_inference(state_net, output_net, stats, x_zero_scaled, U_torch, X_norm, 
         Y_pred_norm = [y.numpy() for y in Y_pred_torch]
         Y_pred = []
         for matrix in Y_pred_norm:
-            Y_pred.append(matrix * Y_std[2:4].numpy() + Y_mean[2:4].numpy())
+            Y_pred.append((matrix + 1) / 2 * (Y_max[2:4] - Y_min[2:4]).numpy() + Y_min[2:4].numpy())
 
     def calc_errors(actual_list, predicted_list, var_index):
         actual = np.concatenate([seq[:, var_index] for seq in actual_list])
