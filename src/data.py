@@ -3,21 +3,6 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset
 
-from .config import SCALING_FIELDS
-
-
-def load_scaling_factors(data_path):
-    """Load and parse scaling factors from MATLAB file into a clean dict."""
-    mat = scipy.io.loadmat(data_path)
-    raw_sf = mat['scalingFactors']
-    sf = {}
-    for name in SCALING_FIELDS:
-        sf[name] = {
-            'scale': raw_sf[0][0][name]['scale'][0, 0][0, 0],
-            'offset': raw_sf[0][0][name]['offset'][0, 0][0, 0],
-        }
-    return sf
-
 
 def load_training_data(data_path):
     """Load U_array/Y_array used by training. Returns lists of torch tensors."""
@@ -36,37 +21,65 @@ def load_inference_data(data_path):
     return CsvData_array
 
 
-def normalize(CsvData_array, sf):
-    """Normalize raw data and split into U/X/Y components (both raw and normalized)."""
-    col_sf_map = [
-        (0, 'Gas___'), (1, 'Decel_m_s2_'), (2, 'Steer_deg_'),
-        (3, 'Ax_g_'), (4, 'Ay_g_'), (5, 'Vx_km_h_'), (6, 'Yaw_deg_sec_'),
-    ]
+def compute_normalization_stats(U_list, Y_list):
+    """Compute per-column min and max from raw training data.
 
-    CsvData_norm = []
-    for matrix in CsvData_array:
-        norm_matrix = matrix.copy()
-        for col, key in col_sf_map:
-            norm_matrix[:, col] = matrix[:, col] * sf[key]['scale'] + sf[key]['offset']
-        CsvData_norm.append(norm_matrix)
+    Returns dict with U_min(3,), U_max(3,), Y_min(4,), Y_max(4,) tensors.
+    """
+    U_all = torch.cat(U_list, dim=0)
+    Y_all = torch.cat(Y_list, dim=0)
+
+    stats = {
+        'U_min': U_all.min(dim=0).values,
+        'U_max': U_all.max(dim=0).values,
+        'Y_min': Y_all.min(dim=0).values,
+        'Y_max': Y_all.max(dim=0).values,
+    }
+    return stats
+
+
+def normalize_list(data_list, data_min, data_max):
+    """Apply min-max normalization to [-1, 1]: 2*(x - min)/(max - min) - 1."""
+    return [2 * (x - data_min) / (data_max - data_min) - 1 for x in data_list]
+
+
+def normalize_inference_data(CsvData_array, stats):
+    """Normalize raw matrixData and split into U/X/Y components (both raw and normalized).
+
+    matrixData columns: [Gas(0), Decel(1), Steer(2), Ax(3), Ay(4), Vx(5), Yaw(6)]
+    X = cols [5,6] = [Vx, Yaw] -> uses Y_min[0:2]/Y_max[0:2]
+    Y = cols [3,4] = [Ax, Ay]  -> uses Y_min[2:4]/Y_max[2:4]
+    """
+    U_min_np = stats['U_min'].numpy()
+    U_max_np = stats['U_max'].numpy()
+    Y_min_np = stats['Y_min'].numpy()
+    Y_max_np = stats['Y_max'].numpy()
 
     U, X, Y = [], [], []
     U_norm, X_norm, Y_norm = [], [], []
 
-    for matrix, norm_matrix in zip(CsvData_array, CsvData_norm):
-        U.append(matrix[:, [0, 1, 2]])
-        X.append(matrix[:, [5, 6]])
-        Y.append(matrix[:, [3, 4]])
-        U_norm.append(norm_matrix[:, [0, 1, 2]])
-        X_norm.append(norm_matrix[:, [5, 6]])
-        Y_norm.append(norm_matrix[:, [3, 4]])
+    for matrix in CsvData_array:
+        u_raw = matrix[:, [0, 1, 2]]
+        x_raw = matrix[:, [5, 6]]
+        y_raw = matrix[:, [3, 4]]
 
-    return CsvData_norm, U, X, Y, U_norm, X_norm, Y_norm
+        u_normalized = 2 * (u_raw - U_min_np) / (U_max_np - U_min_np) - 1
+        x_normalized = 2 * (x_raw - Y_min_np[0:2]) / (Y_max_np[0:2] - Y_min_np[0:2]) - 1
+        y_normalized = 2 * (y_raw - Y_min_np[2:4]) / (Y_max_np[2:4] - Y_min_np[2:4]) - 1
+
+        U.append(u_raw)
+        X.append(x_raw)
+        Y.append(y_raw)
+        U_norm.append(u_normalized)
+        X_norm.append(x_normalized)
+        Y_norm.append(y_normalized)
+
+    return U, X, Y, U_norm, X_norm, Y_norm
 
 
-def compute_x_zero_scaled(sf):
-    """Compute the scaled zero-velocity value."""
-    return 0.0 * sf['Vx_km_h_']['scale'] + sf['Vx_km_h_']['offset']
+def compute_x_zero_scaled(stats):
+    """Compute the min-max scaled zero-velocity value."""
+    return 2 * (0.0 - stats['Y_min'][0].item()) / (stats['Y_max'][0].item() - stats['Y_min'][0].item()) - 1
 
 
 class ExperimentDataset(Dataset):
